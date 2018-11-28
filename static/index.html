@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>A static page</title>
+    <link rel="stylesheet" href="/stylesheets/main.css">
+</head>
+<body>
+<h1>Hello from a static page</h1>
+<button class="vot-btn" id="vot-btn-0" value="0">0</button>
+<button class="vot-btn" id="vot-btn-1" value="1">1</button>
+<button class="vot-btn" id="vot-btn-2" value="2">2</button>
+<button class="vot-btn" id="vot-btn-3" value="3">3</button>
+<button class="vot-btn" id="vot-btn-5" value="5">5</button>
+<button class="vot-btn" id="vot-btn-8" value="8">8</button>
+</body>
+<script>
+    // Create WebSocket connection.
+    socket = new WebSocket('ws://' + window.location.hostname + ':12345/ws');
+    // Connection opened
+    socket.addEventListener('open', function (event) {
+        // socket.send('hello');
+    });
+    // Listen for messages
+    socket.addEventListener('message', function (event) {
+        console.log('Message from server ', event.data);
+    });
+    var initButtons = function () {
+        var voteButtons = document.getElementsByClassName("vot-btn");
+        for (var i = 0; i < voteButtons.length; i++) {
+            voteButtons[i].addEventListener("click", send);
+        }
+    };
+    var send = function (evt) {
+        socket.send("button pressed: " + evt.target.value)
+    };
+
+    initButtons()
+</script>
+</html>
