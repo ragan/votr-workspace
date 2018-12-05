@@ -25,6 +25,11 @@ func Go() {
 	http.Handle("/static", http.StripPrefix("/static/", fs))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/" {
+			roomId := RoomId(6)
+			http.Redirect(w, r, "/" + roomId, http.StatusTemporaryRedirect)
+		}
 		http.ServeFile(w, r, "static/index.html")
 	})
 
