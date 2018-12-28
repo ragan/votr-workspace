@@ -26,6 +26,9 @@ func RootHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok || len(id) < 1 {
 				roomId := NewRoom()
 				http.Redirect(w, r, "/?r="+roomId, http.StatusTemporaryRedirect)
+			} else if !Exists(id[0]) {
+				log.Printf("Room with id \"%s\" does not exist", id[0])
+				http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 			}
 		}
 		http.ServeFile(w, r, "static/index.html")
@@ -77,8 +80,6 @@ func Go() {
 }
 
 func serve(newCon chan roomConn, users map[*User]bool) {
-	var unregister = make(chan *User)
-	var newMessages = make(chan []byte)
 	for {
 		select {
 		case conn := <-newCon:
@@ -88,19 +89,14 @@ func serve(newCon chan roomConn, users map[*User]bool) {
 				conn:     conn.ws,
 				readChan: make(chan []byte),
 			}
-			AddUser(u, conn.roomId)
-			users[u] = true
-			log.Printf("New User. Users count: %d", len(users))
-			go u.read(newMessages, unregister)
-			go u.write(conn.ws, u.readChan)
-		case msg := <-newMessages:
-			// New message
-			for u := range users {
-				u.readChan <- msg
+			err, info := AddUser(u, conn.roomId)
+			if err != nil {
+				log.Print(err)
 			}
-		case u := <-unregister:
-			delete(users, u)
-			break
+			//users[u] = true
+			//log.Printf("New User. Users count: %d", len(users))
+			go u.read(info.newMessages, info.unregister)
+			go u.write(conn.ws, u.readChan)
 		}
 	}
 }
