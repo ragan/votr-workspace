@@ -11,6 +11,12 @@ import (
 type User struct {
 	conn     *websocket.Conn
 	readChan chan []byte
+	vote     int
+}
+
+type roomConn struct {
+	ws     *websocket.Conn
+	roomId string
 }
 
 func Go() {
@@ -21,30 +27,45 @@ func Go() {
 
 	var users = make(map[*User]bool, 0)
 
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static", http.StripPrefix("/static/", fs))
+	http.Handle("/static/", http.StripPrefix("/static/",
+		http.FileServer(http.Dir("static"))))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		if path == "/" {
-			roomId := RoomId(6)
-			http.Redirect(w, r, "/" + roomId, http.StatusTemporaryRedirect)
+		log.Printf("Root handler handling %s", r.URL)
+		if r.URL.Path == "/" {
+			id, ok := r.URL.Query()["r"]
+			if !ok || len(id) < 1 {
+				roomId := NewRoom()
+				http.Redirect(w, r, "/?r="+roomId, http.StatusTemporaryRedirect)
+			}
 		}
 		http.ServeFile(w, r, "static/index.html")
 	})
 
-	newConnection := make(chan *websocket.Conn)
+	newConnection := make(chan roomConn)
 
 	go serve(newConnection, users)
 
 	http.HandleFunc("/ws", func(writer http.ResponseWriter,
 		request *http.Request) {
+		log.Printf("Incoming websocket request: %s", request.URL)
 		conn, err := upgrade.Upgrade(writer, request, nil)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		newConnection <- conn
+
+		id, ok := request.URL.Query()["r"]
+		if !ok || len(id) < 1 {
+			log.Println("Got websocket request without \"r\" parameter.")
+			return // todo: error message
+		}
+
+		log.Printf("Incoming websocket connection id=\"%s\"", id[0])
+		newConnection <- roomConn{
+			conn,
+			id[0],
+		}
 	})
 
 	err := http.ListenAndServe(":12345", nil)
@@ -53,22 +74,23 @@ func Go() {
 	}
 }
 
-func serve(newCon chan *websocket.Conn, users map[*User]bool) {
+func serve(newCon chan roomConn, users map[*User]bool) {
 	var unregister = make(chan *User)
 	var newMessages = make(chan []byte)
 	for {
 		select {
 		case conn := <-newCon:
 			// New connection
-			log.Printf("New connection from %s", conn.RemoteAddr())
+			log.Printf("New connection from %s", conn.ws.RemoteAddr())
 			u := &User{
-				conn:     conn,
+				conn:     conn.ws,
 				readChan: make(chan []byte),
 			}
+			AddUser(u, conn.roomId)
 			users[u] = true
 			log.Printf("New User. Users count: %d", len(users))
 			go u.read(newMessages, unregister)
-			go u.write(conn, u.readChan)
+			go u.write(conn.ws, u.readChan)
 		case msg := <-newMessages:
 			// New message
 			for u := range users {
