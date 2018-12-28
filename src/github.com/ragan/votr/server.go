@@ -19,6 +19,18 @@ type roomConn struct {
 	roomId string
 }
 
+func RootHandler(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Root handler handling %s", r.URL)
+		if r.URL.Path == "/" {
+			id, ok := r.URL.Query()["r"]
+			if !ok || len(id) < 1 {
+				roomId := NewRoom()
+				http.Redirect(w, r, "/?r="+roomId, http.StatusTemporaryRedirect)
+			}
+		}
+		http.ServeFile(w, r, "static/index.html")
+	}
+
 func Go() {
 	var upgrade = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -30,17 +42,7 @@ func Go() {
 	http.Handle("/static/", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Root handler handling %s", r.URL)
-		if r.URL.Path == "/" {
-			id, ok := r.URL.Query()["r"]
-			if !ok || len(id) < 1 {
-				roomId := NewRoom()
-				http.Redirect(w, r, "/?r="+roomId, http.StatusTemporaryRedirect)
-			}
-		}
-		http.ServeFile(w, r, "static/index.html")
-	})
+	http.HandleFunc("/", RootHandler)
 
 	newConnection := make(chan roomConn)
 
