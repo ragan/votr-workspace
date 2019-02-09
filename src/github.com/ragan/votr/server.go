@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	_ "net/http/pprof"
 )
 
 type User struct {
@@ -40,8 +41,6 @@ func Go() {
 		WriteBufferSize: 1024,
 	}
 
-	var users = make(map[*User]bool, 0)
-
 	http.Handle("/static/", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
 
@@ -49,7 +48,7 @@ func Go() {
 
 	newConnection := make(chan roomConn)
 
-	go serve(newConnection, users)
+	go serve(newConnection)
 
 	http.HandleFunc("/ws", func(writer http.ResponseWriter,
 		request *http.Request) {
@@ -79,7 +78,7 @@ func Go() {
 	}
 }
 
-func serve(newCon chan roomConn, users map[*User]bool) {
+func serve(newCon chan roomConn) {
 	for {
 		select {
 		case conn := <-newCon:

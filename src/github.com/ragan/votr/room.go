@@ -15,6 +15,7 @@ type Room struct {
 }
 
 func init() {
+	// Debug routine
 	go func() {
 		ticker := time.NewTicker(10 * time.Second)
 		for {
@@ -25,6 +26,7 @@ func init() {
 					count += len(room.users)
 				}
 				log.Printf("Users count is: \"%v\"", count)
+				log.Printf("Rooms count is: \"%v\"", len(rooms))
 			}
 		}
 	}()
@@ -64,6 +66,7 @@ func AddUser(u *User, roomId string) (error, RoomInfo) {
 		return fmt.Errorf("room \"%s\" does not exist", roomId), RoomInfo{}
 	}
 	room.users[u] = true
+	room.newMessages <- []byte("New user entered room...")
 	log.Printf("Room users count: \"%v\"", len(room.users))
 	return nil, RoomInfo{room.unregister, room.newMessages}
 }
@@ -77,9 +80,9 @@ func (r *Room) bCast() {
 				u.readChan <- msg
 			}
 		case u := <-r.unregister:
+			log.Printf("Removing user from room...")
 			delete(r.users, u)
-			break
-
+			r.newMessages <- []byte("User left the room...")
 		}
 	}
 }
