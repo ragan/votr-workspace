@@ -11,14 +11,14 @@ type User struct {
 	// client connection
 	conn *websocket.Conn
 	// messages from room broadcast are written here
-	msg  chan []byte
+	msg  chan Message
 	vote int
 }
 
 func NewUser(c *websocket.Conn) *User {
 	return &User{
 		conn: c,
-		msg:  make(chan []byte),
+		msg:  make(chan Message),
 	}
 }
 
@@ -33,13 +33,18 @@ func (u *User) write(conn *websocket.Conn) {
 		select {
 		// Incoming messages are being sent to recipient
 		case msg := <-u.msg:
-			w, err := conn.NextWriter(websocket.TextMessage)
+			//w, err := conn.NextWriter(websocket.TextMessage)
+			//if err != nil {
+			//	log.Printf("NextWriter error: %v", err)
+			//	return
+			//}
+			//w.Write(msg)
+			//if err := w.Close(); err != nil {
+			//	return
+			//}
+			err := conn.WriteJSON(msg)
 			if err != nil {
-				log.Printf("NextWriter error: %v", err)
-				return
-			}
-			w.Write(msg)
-			if err := w.Close(); err != nil {
+				log.Printf("Error writing message: %s", err)
 				return
 			}
 		case <-ticker.C:
@@ -52,7 +57,7 @@ func (u *User) write(conn *websocket.Conn) {
 	}
 }
 
-func (u *User) read(broadcast chan []byte, delete chan *User) {
+func (u *User) read(broadcast chan Message, delete chan *User) {
 	defer func() {
 		u.conn.Close()
 	}()
@@ -65,7 +70,8 @@ func (u *User) read(broadcast chan []byte, delete chan *User) {
 	})
 	for {
 		// message incoming from client
-		_, msg, err := u.conn.ReadMessage()
+		msg := Message{}
+		err := u.conn.ReadJSON(&msg)
 		if err != nil {
 			log.Printf("Read error: %v", err)
 			delete <- u

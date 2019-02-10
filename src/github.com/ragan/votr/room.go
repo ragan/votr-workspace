@@ -28,7 +28,7 @@ var rooms = make(map[string]*Room)
 type Room struct {
 	users          map[*User]bool
 	unregisterChan chan *User
-	broadcastChan  chan []byte
+	broadcastChan  chan Message
 }
 
 // Structure representing new incoming room connection
@@ -61,7 +61,7 @@ func NewRoom() string {
 	room := &Room{
 		make(map[*User]bool),
 		make(chan *User),
-		make(chan []byte),
+		make(chan Message),
 	}
 	rooms[id] = room
 	go room.broadcast()
@@ -74,7 +74,7 @@ func GetIdLen() int {
 
 type RoomInfo struct {
 	unregister chan *User
-	broadcast  chan []byte
+	broadcast  chan Message
 }
 
 // Adding user to room. Room should be created before adding user.
