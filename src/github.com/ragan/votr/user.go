@@ -1,9 +1,10 @@
 package votr
 
 import (
-	"github.com/gorilla/websocket"
 	"log"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type User struct {

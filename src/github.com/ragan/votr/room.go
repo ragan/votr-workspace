@@ -2,10 +2,26 @@ package votr
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"log"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
+
+// Every message must contain its type
+type MessageType int
+
+const (
+	// Message occurs when user votes
+	VoteMsg MessageType = iota
+	// Message occurs when user enters or leaves room
+	StatusMsg
+)
+
+// Represents messages sent between users.
+type Message struct {
+	t MessageType
+}
 
 var rooms = make(map[string]*Room)
 
