@@ -2,6 +2,7 @@ package votr
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 	"log"
 	"time"
 )
@@ -9,9 +10,15 @@ import (
 var rooms = make(map[string]*Room)
 
 type Room struct {
-	users       map[*User]bool
-	unregister  chan *User
-	newMessages chan []byte
+	users          map[*User]bool
+	unregisterChan chan *User
+	broadcastChan  chan []byte
+}
+
+// Structure representing new incoming room connection
+type roomConn struct {
+	ws     *websocket.Conn
+	roomId string
 }
 
 func init() {
@@ -20,7 +27,7 @@ func init() {
 		ticker := time.NewTicker(10 * time.Second)
 		for {
 			select {
-			case <- ticker.C:
+			case <-ticker.C:
 				var count = 0
 				for _, room := range rooms {
 					count += len(room.users)
@@ -41,13 +48,8 @@ func NewRoom() string {
 		make(chan []byte),
 	}
 	rooms[id] = room
-	go room.bCast()
+	go room.broadcast()
 	return id
-}
-
-func Exists(roomId string) bool {
-	_, ok := rooms[roomId]
-	return ok
 }
 
 func GetIdLen() int {
@@ -55,34 +57,36 @@ func GetIdLen() int {
 }
 
 type RoomInfo struct {
-	unregister  chan *User
-	newMessages chan []byte
+	unregister chan *User
+	broadcast  chan []byte
 }
 
-func AddUser(u *User, roomId string) (error, RoomInfo) {
+// Adding user to room. Room should be created before adding user.
+func addUser(u *User, roomId string) (error, RoomInfo) {
 	log.Printf("Adding user to room \"%s\"", roomId)
 	room, ok := rooms[roomId]
 	if !ok {
 		return fmt.Errorf("room \"%s\" does not exist", roomId), RoomInfo{}
 	}
 	room.users[u] = true
-	room.newMessages <- []byte("New user entered room...")
 	log.Printf("Room users count: \"%v\"", len(room.users))
-	return nil, RoomInfo{room.unregister, room.newMessages}
+	return nil, RoomInfo{
+		unregister: room.unregisterChan,
+		broadcast:  room.broadcastChan,
+	}
 }
 
-func (r *Room) bCast() {
+func (r *Room) broadcast() {
 	for {
 		select {
-		case msg := <-r.newMessages:
+		case msg := <-r.broadcastChan:
 			// New message
 			for u := range r.users {
-				u.readChan <- msg
+				u.msg <- msg
 			}
-		case u := <-r.unregister:
-			log.Printf("Removing user from room...")
+		case u := <-r.unregisterChan:
 			delete(r.users, u)
-			r.newMessages <- []byte("User left the room...")
+			u.conn.Close()
 		}
 	}
 }
