@@ -36,8 +36,10 @@
     });
     // Listen for messages
     socket.addEventListener('message', function (event) {
+        var msg = JSON.parse(event.data);
+
         var li = document.createElement("LI");
-        var text = document.createTextNode(event.data);
+        var text = document.createTextNode(msg.value);
         li.appendChild(text);
 
         var ul = document.getElementById("messages");
@@ -53,14 +55,11 @@
         btn.addEventListener("click", function (ev) {
             var sel = document.getElementById("vote-select");
             var val = sel.options[sel.selectedIndex].value;
-            var obj = {type: 1, value: val};
+            var obj = {type: 0, value: val};
             // socket.send("button pressed: " + val)
             socket.send(JSON.stringify(obj))
         })
     };
-    var send = function (evt) {
-    };
-
     initButton()
 </script>
 </html>
