@@ -20,6 +20,7 @@ const (
 
 // Represents messages sent between users.
 type Message struct {
+	user  *User
 	T     MessageType `json:"type"`
 	Value string      `json:"value"`
 }
@@ -96,14 +97,23 @@ func addUser(u *User, roomId string) (error, RoomInfo) {
 func (r *Room) broadcast() {
 	for {
 		select {
+		// New message
 		case msg := <-r.broadcastChan:
-			// New message
+			m := processMsg(msg)
 			for u := range r.users {
-				u.msg <- msg
+				u.msg <- m
 			}
 		case u := <-r.unregisterChan:
 			delete(r.users, u)
 			u.conn.Close()
 		}
+	}
+}
+func processMsg(m Message) Message {
+	switch m.T {
+	case VoteMsg:
+		return Message{T: StatusMsg, Value: "User placed his vote."}
+	default:
+		return m
 	}
 }

@@ -77,6 +77,7 @@ func (u *User) read(broadcast chan Message, delete chan *User) {
 			delete <- u
 			return
 		}
+		msg.user = u
 		broadcast <- msg
 	}
 }
