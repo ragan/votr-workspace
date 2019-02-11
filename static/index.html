@@ -53,7 +53,9 @@
         btn.addEventListener("click", function (ev) {
             var sel = document.getElementById("vote-select");
             var val = sel.options[sel.selectedIndex].value;
-            socket.send("button pressed: " + val)
+            var obj = {type: 1, value: val};
+            // socket.send("button pressed: " + val)
+            socket.send(JSON.stringify(obj))
         })
     };
     var send = function (evt) {

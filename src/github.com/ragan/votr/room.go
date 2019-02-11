@@ -20,7 +20,8 @@ const (
 
 // Represents messages sent between users.
 type Message struct {
-	t MessageType
+	T     MessageType `json:"type"`
+	Value string      `json:"value"`
 }
 
 var rooms = make(map[string]*Room)
