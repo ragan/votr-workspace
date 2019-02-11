@@ -7,6 +7,10 @@
 </head>
 <body>
 <p contenteditable="true" id="room-title" class="title">Room title</p>
+<p id="users-in-room">
+</p>
+<p id="vote-count">
+</p>
 <p>
 <select id="vote-select">
     <option value="0">0</option>
@@ -25,6 +29,8 @@
 </p>
 </body>
 <script>
+    var usersInRoom = document.getElementById("users-in-room");
+    var voteCount = document.getElementById("vote-count");
     // Create WebSocket connection.
     var params = new URLSearchParams(window.location.search);
     var r = params.get("r");
@@ -45,6 +51,9 @@
         var ul = document.getElementById("messages");
         ul.insertBefore(li, ul.childNodes[0]);
         console.log('Message from server ', event.data);
+
+        usersInRoom.innerText = "Users in room: " + msg.userCount;
+        voteCount.innerText = "Vote count: " + msg.voteCount;
     });
     var initButton = function () {
         // var voteButtons = document.getElementsByClassName("vot-btn");
