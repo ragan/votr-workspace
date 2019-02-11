@@ -7,6 +7,7 @@ import (
 
 	"errors"
 	"github.com/gorilla/websocket"
+	"strconv"
 )
 
 // Every message must contain its type
@@ -19,15 +20,17 @@ const (
 	StatusMsg
 	// When message should be ignored by application
 	IgnoreMsg
+	// Sent when user asks to reveal all users votes
+	RevealMsg
 )
 
 // Represents messages sent between users.
 type Message struct {
-	user  *User
-	T     MessageType `json:"type"`
-	Value string      `json:"value"`
-	UserCount int  `json:"userCount"`
-	VoteCount int  `json:"voteCount"`
+	user      *User
+	T         MessageType `json:"type"`
+	Value     string      `json:"value"`
+	UserCount int         `json:"userCount"`
+	VoteCount int         `json:"voteCount"`
 }
 
 var rooms = make(map[string]*Room)
@@ -104,7 +107,7 @@ func (r *Room) broadcast() {
 		select {
 		// New message
 		case msg := <-r.broadcastChan:
-			err, m := processMsg(msg)
+			err, m := r.processMsg(msg)
 			if err != nil {
 				log.Printf("Processing message error: %s", err)
 			} else {
@@ -131,6 +134,16 @@ func (r *Room) countVotes() int {
 	return c
 }
 
+// True when all users placed their vote
+func (r *Room) done() bool {
+	for u := range r.users {
+		if u.vote == FirstVote {
+			return false
+		}
+	}
+	return true
+}
+
 // Values allowed when placing a vote.
 var votes = map[string]int{
 	"0": 0,
@@ -151,7 +164,7 @@ const (
 // Initial vote value. Indicates a user did not place any vote.
 const FirstVote = -1
 
-func processMsg(m Message) (error, Message) {
+func (r *Room) processMsg(m Message) (error, Message) {
 	switch m.T {
 	case VoteMsg:
 		// Restrict voting to declared values
@@ -173,6 +186,20 @@ func processMsg(m Message) (error, Message) {
 		return errors.New("placing vote error"), Message{}
 	case StatusMsg:
 		return nil, m
+	case RevealMsg:
+		if !r.done() {
+			return errors.New("voting not complete"), Message{}
+		}
+		s := ""
+		c := 1
+		for u := range r.users {
+			s += strconv.Itoa(u.vote)
+			if c != len(r.users) {
+				s += ", "
+			}
+			c++
+		}
+		return nil, Message{T: RevealMsg, Value: s}
 	default:
 		return errors.New("unknown message type"), Message{}
 	}

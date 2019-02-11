@@ -25,6 +25,9 @@
     <button id="vote-btn">Vote!</button>
 </p>
 <p>
+    <button id="show-votes">Show!</button>
+</p>
+<p>
     <ul id="messages"></ul>
 </p>
 </body>
@@ -69,6 +72,10 @@
             socket.send(JSON.stringify(obj))
         })
     };
-    initButton()
+    initButton();
+    document.getElementById("show-votes")
+            .addEventListener('click', function (ev) {
+        socket.send(JSON.stringify({type: 3}))
+    })
 </script>
 </html>
