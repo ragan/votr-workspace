@@ -26,6 +26,8 @@ type Message struct {
 	user  *User
 	T     MessageType `json:"type"`
 	Value string      `json:"value"`
+	// True, if all users placed their vote.
+	Done  bool        `json:"done"`
 }
 
 var rooms = make(map[string]*Room)
@@ -106,6 +108,7 @@ func (r *Room) broadcast() {
 			if err != nil {
 				log.Printf("Processing message error: %s", err)
 			} else {
+				m.Done = r.done()
 				for u := range r.users {
 					u.msg <- m
 				}
@@ -115,6 +118,16 @@ func (r *Room) broadcast() {
 			u.conn.Close()
 		}
 	}
+}
+
+func (r *Room) done() bool {
+	done := true
+	for u := range r.users {
+		if u.vote == FirstVote {
+			done = false
+		}
+	}
+	return done
 }
 
 // Values allowed when placing a vote.
