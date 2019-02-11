@@ -27,7 +27,7 @@ type Message struct {
 	T     MessageType `json:"type"`
 	Value string      `json:"value"`
 	// True, if all users placed their vote.
-	Done  bool        `json:"done"`
+	Done bool `json:"done"`
 }
 
 var rooms = make(map[string]*Room)
@@ -143,8 +143,8 @@ var votes = map[string]int{
 const (
 	UserPlacedVote  = "User placed his vote."
 	UserChangedVote = "User changed his vote."
-	UserEnteredMsg = "New user entered room."
-	UserLeftMsg = "User left."
+	UserEnteredMsg  = "New user entered room."
+	UserLeftMsg     = "User left."
 )
 
 // Initial vote value. Indicates a user did not place any vote.
