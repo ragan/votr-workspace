@@ -48,6 +48,9 @@
         var msg = JSON.parse(event.data);
 
         var li = document.createElement("LI");
+        if (msg.type === 3) {
+            msg.value = "Vote result: " + msg.value
+        }
         var text = document.createTextNode(msg.value);
         li.appendChild(text);
 

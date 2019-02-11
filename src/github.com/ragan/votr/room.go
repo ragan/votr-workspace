@@ -198,6 +198,8 @@ func (r *Room) processMsg(m Message) (error, Message) {
 				s += ", "
 			}
 			c++
+			// revert user vote value
+			u.vote = FirstVote
 		}
 		return nil, Message{T: RevealMsg, Value: s}
 	default:
