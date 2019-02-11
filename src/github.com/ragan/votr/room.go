@@ -138,13 +138,13 @@ const FirstVote = -1
 func processMsg(m Message) (error, Message) {
 	switch m.T {
 	case VoteMsg:
-		s := UserPlacedVote
 		// Restrict voting to declared values
 		if v, ok := votes[m.Value]; ok {
 			if m.user.vote == v {
 				// Vote did not change. Ignoring.
 				return errors.New("user did not change vote"), Message{}
 			}
+			s := UserPlacedVote
 			// When this is not the first vote
 			if m.user.vote != FirstVote {
 				s = UserChangedVote
