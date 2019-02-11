@@ -27,7 +27,9 @@ type Message struct {
 	T     MessageType `json:"type"`
 	Value string      `json:"value"`
 	// True, if all users placed their vote.
-	Done bool `json:"done"`
+	Done      bool `json:"done"`
+	UserCount int  `json:"userCount"`
+	VoteCount int  `json:"voteCount"`
 }
 
 var rooms = make(map[string]*Room)
@@ -109,6 +111,8 @@ func (r *Room) broadcast() {
 				log.Printf("Processing message error: %s", err)
 			} else {
 				m.Done = r.done()
+				m.UserCount = len(r.users)
+				m.VoteCount = r.countVotes()
 				for u := range r.users {
 					u.msg <- m
 				}
@@ -128,6 +132,16 @@ func (r *Room) done() bool {
 		}
 	}
 	return done
+}
+
+func (r *Room) countVotes() int {
+	c := 0
+	for u := range r.users {
+		if u.vote != FirstVote {
+			c++
+		}
+	}
+	return c
 }
 
 // Values allowed when placing a vote.
