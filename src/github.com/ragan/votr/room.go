@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"errors"
 	"github.com/gorilla/websocket"
 )
 
@@ -16,6 +17,8 @@ const (
 	VoteMsg MessageType = iota
 	// Message occurs when user enters or leaves room
 	StatusMsg
+	// When message should be ignored by application
+	IgnoreMsg
 )
 
 // Represents messages sent between users.
@@ -99,9 +102,13 @@ func (r *Room) broadcast() {
 		select {
 		// New message
 		case msg := <-r.broadcastChan:
-			m := processMsg(msg)
-			for u := range r.users {
-				u.msg <- m
+			err, m := processMsg(msg)
+			if err != nil {
+				log.Printf("Processing message error: %s", err)
+			} else {
+				for u := range r.users {
+					u.msg <- m
+				}
 			}
 		case u := <-r.unregisterChan:
 			delete(r.users, u)
@@ -109,11 +116,46 @@ func (r *Room) broadcast() {
 		}
 	}
 }
-func processMsg(m Message) Message {
+
+// Values allowed when placing a vote.
+var votes = map[string]int{
+	"0": 0,
+	"1": 1,
+	"2": 2,
+	"3": 3,
+	"5": 5,
+	"8": 8,
+}
+
+const (
+	UserPlacedVote  = "User placed his vote."
+	UserChangedVote = "User changed his vote."
+)
+
+// Initial vote value. Indicates a user did not place any vote.
+const FirstVote = -1
+
+func processMsg(m Message) (error, Message) {
 	switch m.T {
 	case VoteMsg:
-		return Message{T: StatusMsg, Value: "User placed his vote."}
+		s := UserPlacedVote
+		// Restrict voting to declared values
+		if v, ok := votes[m.Value]; ok {
+			if m.user.vote == v {
+				// Vote did not change. Ignoring.
+				return errors.New("user did not change vote"), Message{}
+			}
+			// When this is not the first vote
+			if m.user.vote != FirstVote {
+				s = UserChangedVote
+			}
+			log.Printf("User placed vote with value: \"%d\"", v)
+			m.user.vote = v
+			return nil, Message{T: StatusMsg, Value: s}
+		}
+		// Something went wrong
+		return errors.New("placing vote error"), Message{}
 	default:
-		return m
+		return errors.New("unknown message type"), Message{}
 	}
 }

@@ -19,6 +19,7 @@ func NewUser(c *websocket.Conn) *User {
 	return &User{
 		conn: c,
 		msg:  make(chan Message),
+		vote: - 1,
 	}
 }
 
