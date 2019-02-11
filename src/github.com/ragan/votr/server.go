@@ -90,6 +90,12 @@ func (v votr) serve() {
 			}
 			go u.read(info.broadcast, info.unregister)
 			go u.write(newConn.ws)
+
+			info.broadcast <- Message{
+				T:     StatusMsg,
+				Value: UserEnteredMsg,
+				user:  u,
+			}
 		}
 	}
 }

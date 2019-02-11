@@ -143,6 +143,8 @@ var votes = map[string]int{
 const (
 	UserPlacedVote  = "User placed his vote."
 	UserChangedVote = "User changed his vote."
+	UserEnteredMsg = "New user entered room."
+	UserLeftMsg = "User left."
 )
 
 // Initial vote value. Indicates a user did not place any vote.
@@ -168,6 +170,8 @@ func processMsg(m Message) (error, Message) {
 		}
 		// Something went wrong
 		return errors.New("placing vote error"), Message{}
+	case StatusMsg:
+		return nil, m
 	default:
 		return errors.New("unknown message type"), Message{}
 	}
