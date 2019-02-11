@@ -30,14 +30,18 @@ func (v votr) RootHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "static/index.html")
 }
 
-func Go() {
-	v := votr{
+func newVotr() votr {
+	return votr{
 		upg: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
 		newConn: make(chan roomConn),
 	}
+}
+
+func Go() {
+	v := newVotr()
 
 	http.Handle("/static/", http.StripPrefix("/static/",
 		http.FileServer(http.Dir("static"))))
@@ -92,9 +96,10 @@ func (v votr) serve() {
 			go u.write(newConn.ws)
 
 			info.broadcast <- Message{
-				T:     StatusMsg,
-				Value: UserEnteredMsg,
-				user:  u,
+				T:      StatusMsg,
+				Value:  UserEnteredMsg,
+				user:   u,
+				Secret: info.secret,
 			}
 		}
 	}

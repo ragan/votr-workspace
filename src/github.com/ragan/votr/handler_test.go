@@ -12,8 +12,10 @@ func TestRootHandlerStatusCodes(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	v := newVotr()
+
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(RootHandler)
+	handler := http.HandlerFunc(v.RootHandler)
 
 	handler.ServeHTTP(rr, req)
 
@@ -29,8 +31,11 @@ func BenchmarkRootHandler(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	v := newVotr()
+
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(RootHandler)
+	handler := http.HandlerFunc(v.RootHandler)
 	for i := 0; i < b.N; i++ {
 		handler.ServeHTTP(rr, req)
 	}

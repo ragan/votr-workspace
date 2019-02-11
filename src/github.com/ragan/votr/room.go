@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"crypto/rand"
 	"errors"
 	"github.com/gorilla/websocket"
 	"strconv"
@@ -15,22 +16,25 @@ type MessageType int
 
 const (
 	// Message occurs when user votes
-	VoteMsg MessageType = iota
+	VoteMsg MessageType = 0
 	// Message occurs when user enters or leaves room
-	StatusMsg
+	StatusMsg MessageType = 1
 	// When message should be ignored by application
-	IgnoreMsg
-	// Sent when user asks to reveal all users votes
-	RevealMsg
+	IgnoreMsg MessageType = 2
+	// Sent when user asks to reveal all users votes.
+	// Room owner only.
+	RevealMsg MessageType = 100
 )
 
 // Represents messages sent between users.
 type Message struct {
 	user      *User
 	T         MessageType `json:"type"`
-	Value     string      `json:"value"`
+	Value     string      `json:"value,omitempty"`
 	UserCount int         `json:"userCount"`
 	VoteCount int         `json:"voteCount"`
+	// Secret key for room administration
+	Secret string `json:"secret,omitempty"`
 }
 
 var rooms = make(map[string]*Room)
@@ -39,6 +43,7 @@ type Room struct {
 	users          map[*User]bool
 	unregisterChan chan *User
 	broadcastChan  chan Message
+	secret         string
 }
 
 // Structure representing new incoming room connection
@@ -68,14 +73,33 @@ func init() {
 func NewRoom() string {
 	id := RoomId(GetIdLen())
 	log.Printf("Creating new room with id: %s", id)
+	s, err := randString(10)
+	if err != nil {
+		log.Printf("Error generating password: %s", err)
+	}
 	room := &Room{
-		make(map[*User]bool),
-		make(chan *User),
-		make(chan Message),
+		users:          make(map[*User]bool),
+		unregisterChan: make(chan *User),
+		broadcastChan:  make(chan Message),
+		secret:         s,
 	}
 	rooms[id] = room
 	go room.broadcast()
 	return id
+}
+
+func randString(n int) (string, error) {
+	bytes := make([]byte, n)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+		"abcdefghijklmnopqrstuvwxyz-"
+	for i, b := range bytes {
+		bytes[i] = letters[b%byte(len(letters))]
+	}
+	return string(bytes), nil
 }
 
 func GetIdLen() int {
@@ -85,6 +109,7 @@ func GetIdLen() int {
 type RoomInfo struct {
 	unregister chan *User
 	broadcast  chan Message
+	secret     string
 }
 
 // Adding user to room. Room should be created before adding user.
@@ -94,11 +119,17 @@ func addUser(u *User, roomId string) (error, RoomInfo) {
 	if !ok {
 		return fmt.Errorf("room \"%s\" does not exist", roomId), RoomInfo{}
 	}
+	secret := ""
+	if len(room.users) == 0 {
+		// this is the first user. send secret key
+		secret = room.secret
+	}
 	room.users[u] = true
 	log.Printf("Room users count: \"%v\"", len(room.users))
 	return nil, RoomInfo{
 		unregister: room.unregisterChan,
 		broadcast:  room.broadcastChan,
+		secret:     secret,
 	}
 }
 
@@ -165,6 +196,11 @@ const (
 const FirstVote = -1
 
 func (r *Room) processMsg(m Message) (error, Message) {
+	if m.T >= 100 {
+		if r.secret != m.Secret {
+			return fmt.Errorf("unprivileged function call with secret: \"%s\"", m.Secret), Message{T: IgnoreMsg}
+		}
+	}
 	switch m.T {
 	case VoteMsg:
 		// Restrict voting to declared values

@@ -32,6 +32,7 @@
 </p>
 </body>
 <script>
+    var votrSecret = "";
     var usersInRoom = document.getElementById("users-in-room");
     var voteCount = document.getElementById("vote-count");
     // Create WebSocket connection.
@@ -48,8 +49,16 @@
         var msg = JSON.parse(event.data);
 
         var li = document.createElement("LI");
-        if (msg.type === 3) {
+        if (msg.type === 100) {
             msg.value = "Vote result: " + msg.value
+        }
+        if (msg.type === 1) {
+            if (msg.secret !== "" && typeof msg.secret !== 'undefined') {
+                votrSecret = msg.secret
+            } else if (votrSecret === "") {
+                document.getElementById("show-votes").style.visibility =
+                        'hidden';
+            }
         }
         var text = document.createTextNode(msg.value);
         li.appendChild(text);
@@ -78,7 +87,7 @@
     initButton();
     document.getElementById("show-votes")
             .addEventListener('click', function (ev) {
-        socket.send(JSON.stringify({type: 3}))
+        socket.send(JSON.stringify({type: 100, secret: votrSecret}))
     })
 </script>
 </html>
