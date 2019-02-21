@@ -33,6 +33,13 @@
 </body>
 <script>
     var votrSecret = "";
+    document.addEventListener("DOMContentLoaded", function(event) {
+        let secret = window.localStorage.getItem("votrSecret");
+        if (secret !== null) {
+           votrSecret = secret;
+        }
+    });
+
     var usersInRoom = document.getElementById("users-in-room");
     var voteCount = document.getElementById("vote-count");
     // Create WebSocket connection.
@@ -41,9 +48,12 @@
     console.log("r param: " + r);
     var socket = new WebSocket('ws://' + window.location.hostname + ':12345/ws?r=' + r);
     // Connection opened
+
     socket.addEventListener('open', function (event) {
         // socket.send('hello');
     });
+
+
     // Listen for messages
     socket.addEventListener('message', function (event) {
         var msg = JSON.parse(event.data);
@@ -52,14 +62,17 @@
         if (msg.type === 100) {
             msg.value = "Vote result: " + msg.value
         }
+
         if (msg.type === 1) {
             if (msg.secret !== "" && typeof msg.secret !== 'undefined') {
                 votrSecret = msg.secret
+                window.localStorage.setItem('votrSecret', votrSecret);
             } else if (votrSecret === "") {
                 document.getElementById("show-votes").style.visibility =
                         'hidden';
             }
         }
+
         var text = document.createTextNode(msg.value);
         li.appendChild(text);
 
@@ -70,6 +83,7 @@
         usersInRoom.innerText = "Users in room: " + msg.userCount;
         voteCount.innerText = "Vote count: " + msg.voteCount;
     });
+
     var initButton = function () {
         // var voteButtons = document.getElementsByClassName("vot-btn");
         // for (var i = 0; i < voteButtons.length; i++) {
@@ -85,8 +99,7 @@
         })
     };
     initButton();
-    document.getElementById("show-votes")
-            .addEventListener('click', function (ev) {
+    document.getElementById("show-votes").addEventListener('click', function (ev) {
         socket.send(JSON.stringify({type: 100, secret: votrSecret}))
     })
 </script>
