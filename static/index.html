@@ -34,6 +34,7 @@
 <script>
     var votrSecret = "";
     document.addEventListener("DOMContentLoaded", function(event) {
+        document.getElementById("show-votes").disabled = true;
         let secret = window.localStorage.getItem("votrSecret");
         if (secret !== null) {
            votrSecret = secret;
@@ -82,6 +83,12 @@
 
         usersInRoom.innerText = "Users in room: " + msg.userCount;
         voteCount.innerText = "Vote count: " + msg.voteCount;
+
+        if (msg.userCount === msg.voteCount) {
+            document.getElementById("show-votes").disabled = false;
+        } else {
+            document.getElementById("show-votes").disabled = true;
+        }
     });
 
     var initButton = function () {
