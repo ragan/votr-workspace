@@ -41,6 +41,16 @@
         }
     });
 
+    let room_title  = document.getElementById("room-title");
+    room_title.addEventListener("blur", function() {
+        console.log("input event fired");
+        if (room_title.innerText.includes("http")) {
+            let http_regex = new RegExp('(http(\\S+)).');
+            let matched = room_title.innerText.match(http_regex);
+            room_title.innerHTML = room_title.innerText.replace(matched[0], "<a contentEditable='false' href='"+matched[0]+"'>"+matched[0]+"<a>");
+        }
+    }, false);
+
     var usersInRoom = document.getElementById("users-in-room");
     var voteCount = document.getElementById("vote-count");
     // Create WebSocket connection.
